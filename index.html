@@ -1,27 +1,280 @@
 <!DOCTYPE html>
 <html>
-  <head>
+
+<head>
     <script src="jquery.js"></script>
     <script src="data_generator.js"></script>
-  </head>
-  <body>
+    <script src="moment.js"></script>
+    <link rel=stylesheet type="text/css" href="layout.css">
+</head>
+
+<body>
     <script>
+    $(document).ready(function() {
 
-      $(document).ready(function(){
-        var $body = $('body');
-        $body.html('');
+        var userToShow = "";
+        var tweetsShowing = [];
 
-        var index = streams.home.length - 1;
-        while(index >= 0){
-          var tweet = streams.home[index];
-          var $tweet = $('<div></div>');
-          $tweet.text('@' + tweet.user + ': ' + tweet.message);
-          $tweet.appendTo($body);
-          index -= 1;
+        var updateArrayWithPushCallback = function(array, callback) {
+            array.push = function() {
+                var newArray = Array.prototype.push.apply(this, arguments);
+                callback();
+                return newArray;
+            };
+        };
+
+        var streamArrayCallback = function() {
+            updateTweets();
+        };
+
+        updateArrayWithPushCallback(streams.home, streamArrayCallback);
+
+        var formatDate = function(date) {
+            return moment(date).fromNow();
+        };
+
+        var streamToShow = function() {
+            return (userToShow) ? streams.users[userToShow] : streams.home;
+        };
+
+        var addTweetDiv = function() {
+            if ($('.tweets').length === 0) {
+                var $body = $('body');
+                var $tweetDiv = $('<div>', {
+                    class: "tweets"
+                });
+                $body.append($tweetDiv);
+            }
+        };
+
+        var updateTweets = function() {
+            updateTweetCount();
+        };
+
+        var refreshTweets = function(animated) {
+            console.log('ref: ' + userToShow);
+
+            if (userToShow) {
+                $('.tweet').not('.' + userToShow).slideUp().add;
+                $('.tweet.' + userToShow).slideDown();
+            } else {
+                $('.tweet').slideDown();
+            }
+            updateTweetCount();
+        };
+
+        var loadNewTweets = function() {
+            var tweetsHidden = streams.home.slice(tweetsShowing.length, streams.home.length);
+            addTweets(tweetsHidden);
+        };
+
+        var addTweets = function(array) {
+
+            var $tweets = $('.tweets');
+
+            var tweetStream = array;
+            console.log('add tweets:' + tweetStream.length);
+
+
+            for (var index = 0; index < tweetStream.length; index++) {
+                var tweet = tweetStream[index];
+                var $tweet = $('<div/>', {
+                    class: 'tweet'
+                });
+                $tweet.addClass(tweet.user);
+                var formattedDate = formatDate(tweet.created_at);
+                $tweet.html('@' + '<span class="user">' + tweet.user + '</span>' + ' ' + '<span class="date">' + formattedDate + '</span>' + '<br/>' + tweet.message);
+
+                $tweet.css("display", "none");
+
+                $tweet.prependTo($tweets);
+
+                tweetsShowing.push(tweet);
+            }
+
+
+            $(".user").css("font-weight", "bold");
+            formatTweetColors();
+
+            $(".date").css("color", "gray");
+
+
+        };
+
+        var formatTweetColors = function() {
+            if (userToShow === "") {
+                $(".user").css("color", "blue");
+            } else {
+                $(".user").css("color", "black");
+            }
+        };
+
+        var addBackButton = function() {
+
+            //check if back button already exists
+            if ($('.back').length === 0) {
+                var $body = $('body');
+                var $backDiv = $('<div>', {
+                    class: "back"
+                });
+                $backDiv.html('<a href=#>' + 'Back To All Tweetles' + '</a>');
+                $(".header").after($backDiv);
+
+                $(document.body).on('mousedown', '.back', function(event) {
+                    event.preventDefault();
+
+                    console.log('click event: back');
+                    userToShow = "";
+                    removeBackButton();
+                    addTweetForm();
+                    refreshTweets();
+                    formatTweetColors();
+
+                });
+            }
+        };
+
+        var addTweetCount = function() {
+
+            if ($('.tweetCount').length === 0) {
+                var $body = $('body');
+                var $tweetCount = $('<div>', {
+                    class: "tweetCount"
+                });
+                $(".tweets").before($tweetCount);
+
+                $(document.body).on('mousedown', '.tweetCount', function(event) {
+                    event.preventDefault();
+
+                    console.log('click event: show new tweets');
+                    loadNewTweets();
+                    refreshTweets();
+                });
+            }
+        };
+
+        var updateTweetCount = function() {
+            var newTweetCount;
+            if (userToShow) {
+                newTweetCount = streamToShow().length - $('.tweet.' + userToShow).length;
+            } else {
+                newTweetCount = streamToShow().length - $('.tweet').length;
+            }
+
+            $('.tweetCount').html('<p><a href=# class="tweetCountLabel">Click To Show ' + newTweetCount + ' New Tweetles!' + '</a></p>');
+        };
+
+        var addTweetForm = function() {
+
+            //check if tweet form already exists
+            if ($('.tweetForm').length === 0) {
+                var $body = $('body');
+                var $formDiv = $('<div>', {
+                    class: "tweetForm"
+                });
+                $formDiv.html('<form>Send a Tweetle: <input type="text"><br/><input type="submit" value="Submit"></form>');
+                $(".header").after($formDiv);
+            }
+
+            $("form").submit(submitClickCallBack);
+        };
+
+        var removeTweetForm = function() {
+            $('.tweetForm').remove();
+        };
+
+        var removeBackButton = function() {
+            $('.back').remove();
+
+        };
+
+        var addTitle = function() {
+
+            //check if back button already exists
+            if ($('.header').length === 0) {
+                var $body = $('body');
+                var $titleDiv = $('<div>', {
+                    class: "header"
+                });
+                var titleText = "Twittler";
+                var taglineText = "a poor man's twitter";
+                $titleDiv.html('<span class=title>' + titleText + '</span>' + ' ' + '<span class=tagline>' + taglineText + '</span>');
+                $titleDiv.prependTo($body);
+
+                $(document.body).on('mousedown', '.title', function(event) {
+                    event.preventDefault();
+
+                    console.log('click event: title clicked');
+                });
+            }
+        };
+
+        var addUserClickCallBack = function() {
+            $(document.body).on('mousedown', '.tweet span', function(event) {
+                event.preventDefault();
+
+                console.log('click event, class = ' + $(this).text());
+                userToShow = $(this).text();
+                addBackButton();
+                removeTweetForm();
+                refreshTweets();
+                formatTweetColors();
+
+            });
+        };
+
+        var submitClickCallBack = function(event) {
+            event.preventDefault();
+            if ($("input:first").val()) {
+                visitor = "visitor";
+                writeTweet($("input:first").val());
+                $("input:first").val("");
+                loadNewTweets();
+                refreshTweets();
+
+                return;
+            }
+        };
+
+        var setupVisitor = function() {
+            visitor = "visitor";
+            streams.users[visitor] = [];
+        };
+
+        setInterval(function() {
+            var tweetDiv = $('.tweet:last');
+            for (var tweet in tweetsShowing) {
+                var formattedDate = formatDate(tweetsShowing[tweet].created_at);
+                tweetDiv.find('.date').html(formattedDate);
+                tweetDiv = tweetDiv.prev();
+            }
+
+
+            assert($('.tweet').length === tweetsShowing.length, "tweets showing array does not match tweets showing");
+
+            //update dates every 10 seconds
+        }, 10000);
+
+        function assert(condition, message) {
+            if (!condition) {
+                throw message || "Assertion failed";
+            }
         }
 
-      });
+        setupVisitor();
+        addTitle();
+        addTweetForm();
+        addTweetDiv();
+        addTweetCount();
 
+        addUserClickCallBack();
+
+        updateTweets();
+        loadNewTweets();
+        refreshTweets();
+
+    });
     </script>
-  </body>
+</body>
+
 </html>
